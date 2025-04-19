@@ -9,66 +9,79 @@
 
 set -e
 
+# 设置创建文件时的默认权限掩码,文件所有者拥有全部权限，其他用户和组用户拥有读和执行权限
 umask 0022
+# 取消设置grep和sed相关的环境变量，确保此这两个命令在任何环境下都能够正常工作
 unset GREP_OPTIONS SED
 
 _get_repo() (
 	mkdir -p "$1"
 	cd "$1"
+
+	# 初始化git仓库
 	[ -d .git ] || git init
+
+	# 添加远程仓库
 	if git remote get-url origin >/dev/null 2>/dev/null; then
 		git remote set-url origin "$2"
 	else
 		git remote add origin "$2"
 	fi
+
+	# 拉取远程仓库
 	git fetch origin -f
 	git fetch origin --tags -f
+
+	# 检出指定分支/tag
 	git checkout -f "origin/$3" -B "build" 2>/dev/null || git checkout -f "$3" -B "build"
 )
 
-OMR_DIST=${OMR_DIST:-openmptcprouter}
-OMR_HOST=${OMR_HOST:-$(curl -sS ifconfig.co)}
-OMR_PORT=${OMR_PORT:-80}
-OMR_KEEPBIN=${OMR_KEEPBIN:-no}
-OMR_IMG=${OMR_IMG:-yes}
-OMR_LOG=${OMR_LOG:-no}
+# 设置环境变量的默认值
+OMR_DIST=${OMR_DIST:-openmptcprouter}				# OMR发行版名称
+OMR_HOST=${OMR_HOST:-$(curl -sS ifconfig.co)}		# 获取当前主机的公网IP
+OMR_PORT=${OMR_PORT:-80}							# 用于访问OpenMPTCProuter的端口号						
+OMR_KEEPBIN=${OMR_KEEPBIN:-no}						# 是否使用之前已经编译生成的二进制文件，设置为yes可避免重复编译，加快构建速度
+OMR_IMG=${OMR_IMG:-yes}								# 是否生成固件镜像文件
+OMR_LOG=${OMR_LOG:-no}								# 是否启用编译日志
 #OMR_UEFI=${OMR_UEFI:-yes}
-OMR_PACKAGES=${OMR_PACKAGES:-full}
-OMR_ALL_PACKAGES=${OMR_ALL_PACKAGES:-no}
-OMR_TARGET=${OMR_TARGET:-x86_64}
-OMR_TARGET_CONFIG="config-$OMR_TARGET"
-UPSTREAM=${UPSTREAM:-no}
+OMR_PACKAGES=${OMR_PACKAGES:-full}					# 要安装的软件包列表
+OMR_ALL_PACKAGES=${OMR_ALL_PACKAGES:-no}			# 是否编译所有可用的软件包
+OMR_TARGET=${OMR_TARGET:-x86_64}					# 目标平台
+OMR_TARGET_CONFIG="config-$OMR_TARGET"				# 目标平台的配置文件
+UPSTREAM=${UPSTREAM:-no}							# 是否使用原始OpenWrt的上有代码而不是修改过的版本
 #SYSLOG=${SYSLOG:-busybox-syslogd}
 #SYSLOG=${SYSLOG:-syslog-ng}
-SYSLOG=${SYSLOG:-logd}
-OMR_KERNEL=${OMR_KERNEL:-5.4}
-SHORTCUT_FE=${SHORTCUT_FE:-no}
-DISABLE_FAILSAFE=${DISABLE_FAILSAFE:-no}
+SYSLOG=${SYSLOG:-logd}								# 系统日志服务，默认使用logd-OpenWrt的轻量级系统日志守护进程
+OMR_KERNEL=${OMR_KERNEL:-5.4}						# 使用的内核版本
+SHORTCUT_FE=${SHORTCUT_FE:-no}						# 是否启用快速转发，可以提高路由性能
+DISABLE_FAILSAFE=${DISABLE_FAILSAFE:-no}			# 是否禁用故障安全模式
 #OMR_RELEASE=${OMR_RELEASE:-$(git describe --tags `git rev-list --tags --max-count=1` | sed 's/^\([0-9.]*\).*/\1/')}
 #OMR_RELEASE=${OMR_RELEASE:-$(git tag --sort=committerdate | tail -1)}
-OMR_RELEASE=${OMR_RELEASE:-$(git describe --tags `git rev-list --tags --max-count=1` | tail -1)}
-OMR_REPO=${OMR_REPO:-http://$OMR_HOST:$OMR_PORT/release/$OMR_RELEASE-$OMR_KERNEL/$OMR_TARGET}
+OMR_RELEASE=${OMR_RELEASE:-$(git describe --tags `git rev-list --tags --max-count=1` | tail -1)}	# 设置发布版本号
+OMR_REPO=${OMR_REPO:-http://$OMR_HOST:$OMR_PORT/release/$OMR_RELEASE-$OMR_KERNEL/$OMR_TARGET}		# 设置软件源仓库的URL
 
-OMR_FEED_URL="${OMR_FEED_URL:-https://github.com/ysurac/openmptcprouter-feeds}"
-OMR_FEED_SRC="${OMR_FEED_SRC:-develop}"
+OMR_FEED_URL="${OMR_FEED_URL:-https://github.com/ysurac/openmptcprouter-feeds}"	# FEED软件源URL
+OMR_FEED_SRC="${OMR_FEED_SRC:-develop}"											# 使用FEED软件源的develop分支
 
-CUSTOM_FEED_URL="${CUSTOM_FEED_URL}"
-CUSTOM_FEED_URL_BRANCH="${CUSTOM_FEED_URL_BRANCH:-main}"
+CUSTOM_FEED_URL="${CUSTOM_FEED_URL}"						# 用户自定义的FEED软件源URL
+CUSTOM_FEED_URL_BRANCH="${CUSTOM_FEED_URL_BRANCH:-main}"	# 用户自定义的FEED软件源的分支
 
-OMR_OPENWRT=${OMR_OPENWRT:-default}
-OMR_OPENWRT_GIT=${OMR_OPENWRT_GIT:-https://github.com}
-OMR_FORCE_DSA=${OMR_FORCE_DSA:-0}
+OMR_OPENWRT=${OMR_OPENWRT:-default}							# 设置要使用的OpenWrt版本/分支
+OMR_OPENWRT_GIT=${OMR_OPENWRT_GIT:-https://github.com}		# OpenWrt仓库的基础URL
+OMR_FORCE_DSA=${OMR_FORCE_DSA:-0}	# 是否强制使用DSA(Disributed Switch Architercture),一个管理网络交换机的内核框架
 
-
+# RUTX12 TELTONIKA Networks公司生产的一系列工业级4G/5G路由器
 if [ "$OMR_KERNEL" = "5.4" ] && [ "$OMR_TARGET" = "rutx12" ]; then
 	OMR_TARGET_CONFIG="config-rutx"
 fi
 
+# 不支持的平台
 if [ ! -f "$OMR_TARGET_CONFIG" ]; then
 	echo "Target $OMR_TARGET not found !"
 	#exit 1
 fi
 
+# 根据不同的目标设备，设置相应的实际目标架构
 if [ "$OMR_TARGET" = "rpi4" ]; then
 	OMR_REAL_TARGET="aarch64_cortex-a72"
 elif [ "$OMR_TARGET" = "wrt3200acm" ] || [ "$OMR_TARGET" = "wrt32x" ]; then
@@ -89,8 +102,12 @@ else
 	OMR_REAL_TARGET=${OMR_TARGET}
 fi
 
+# 如果ONLY_PREPARE设置为yes,则只进行准备工作，不克隆代码，不进行编译
 if [ "$ONLY_PREPARE" != "yes" ]; then
 	#_get_repo source https://github.com/ysurac/openmptcprouter-source "master"
+
+	# 获取openwrt源码/openwrt-package源码/luci源码/openwrt-routing源码
+	# openwrt源码保存在/xx(平台)/xx(内核版本)/目录下， 其他源码都保存在feeds/x.xx/目录下
 	if [ "$OMR_OPENWRT" = "default" ]; then
 		if [ "$OMR_KERNEL" = "5.4" ]; then
 			# Use OpenWrt 21.02 for 5.4 kernel
@@ -134,42 +151,58 @@ if [ "$ONLY_PREPARE" != "yes" ]; then
 	fi
 fi
 
+# 获取OMR FEED软件源URL,保存在feeds/openmptcprouter目录下
 if [ -z "$OMR_FEED" ]; then
 	OMR_FEED=feeds/openmptcprouter
 	[ "$ONLY_PREPARE" != "yes" ] && _get_repo "$OMR_FEED" "$OMR_FEED_URL" "$OMR_FEED_SRC"
 fi
 
+# 获取用户自定义的FEED软件源URL,保存在用户指定目录下
 if [ -n "$CUSTOM_FEED_URL" ] && [ -z "$CUSTOM_FEED" ]; then
 	CUSTOM_FEED=feeds/${OMR_KERNEL}/${OMR_DIST}
 	[ "$ONLY_PREPARE" != "yes" ] && _get_repo "$CUSTOM_FEED" "$CUSTOM_FEED_URL" "$CUSTOM_FEED_URL_BRANCH"
 fi
 
+# 通过命令行参数来设置发行版，默认为openmptcprouter
 if [ -n "$1" ] && [ -f "$OMR_FEED/$1/Makefile" ]; then
 	OMR_DIST=$1
 	shift 1
 fi
 
+# 是否保留之前已编译好的二进制文件，设置为yes可避免重复编译，加快构建速度
 if [ "$OMR_KEEPBIN" = "no" ]; then 
 	rm -rf "$OMR_TARGET/${OMR_KERNEL}/source/bin"
 fi
+
+# 只获取源码，进行编译
 if [ "$ONLY_GET_REPO" = "yes" ]; then
 	exit 0
 fi
+
+# 清理编译环境中的临时文件
 rm -rf "$OMR_TARGET/${OMR_KERNEL}/source/files" "$OMR_TARGET/${OMR_KERNEL}/source/tmp"
 #rm -rf "$OMR_TARGET/${OMR_KERNEL}/source/target/linux/mediatek/patches-4.14"
 #rm -rf "$OMR_TARGET/${OMR_KERNEL}/source/target/linux/mediatek/patches-5.4"
 #rm -rf "$OMR_TARGET/${OMR_KERNEL}/source/package/boot/uboot-mediatek"
 #rm -rf "$OMR_TARGET/${OMR_KERNEL}/source/package/boot/arm-trusted-firmware-mediatek"
+
+# 5.4内核，瑞芯微uboot
 if [ "${OMR_KERNEL}" = "5.4" ]; then
 	echo "rm -rf $OMR_TARGET/${OMR_KERNEL}/source/package/boot/uboot-rockchip"
 	rm -rf "${OMR_TARGET}/${OMR_KERNEL}/source/package/boot/uboot-rockchip"
 fi
+
+#  MVEBU平台
 echo "rm -rf $OMR_TARGET/${OMR_KERNEL}/source/package/boot/uboot-mvebu"
 rm -rf "${OMR_TARGET}/${OMR_KERNEL}/source/package/boot/uboot-mvebu"
+
+# ipq40xx平台
 [ "${OMR_KERNEL}" = "6.1" ] || [ "${OMR_KERNEL}" = "6.6" ] || [ "${OMR_KERNEL}" = "6.10" ] || [ "${OMR_KERNEL}" = "6.11" ] || [ "${OMR_KERNEL}" = "6.12" ] && {
 	echo "rm -rf $OMR_TARGET/${OMR_KERNEL}/source/package/boot/uboot-ipq40xx"
 	rm -rf "${OMR_TARGET}/${OMR_KERNEL}/source/package/boot/uboot-ipq40xx"
 }
+
+# 博通平台，如树莓派CM4使用的就是bcm2711
 [ "${OMR_KERNEL}" = "6.1" ] && {
 	rm -rf "${OMR_TARGET}/${OMR_KERNEL}/source/target/linux/bcm27xx/patches-6.1"
 }
@@ -183,8 +216,10 @@ rm -rf "${OMR_TARGET}/${OMR_KERNEL}/source/package/boot/uboot-mvebu"
 # Remove current dwarves directory to replace with fixed package
 #rm -rf "${OMR_TARGET}/${OMR_KERNEL}/source/tools/dwarves"
 
-
+# 5.4内核
 [ "${OMR_KERNEL}" = "5.4" ] && rm -rf "$OMR_TARGET/${OMR_KERNEL}/source/tools/firmware-utils"
+
+# RUTX平台，5.4内核
 if ([ "$OMR_TARGET" = "rutx" ] || [ "$OMR_TARGET" = "rutx12" ]) && [ "${OMR_KERNEL}" = "5.4" ]; then
 #	cp -rf root/* "$OMR_TARGET/${OMR_KERNEL}/source"
 	cp -rf common/* "$OMR_TARGET/${OMR_KERNEL}/source/"
@@ -200,11 +235,14 @@ else
 #	rm -rf "$OMR_TARGET/${OMR_KERNEL}/source/target/linux/ipq40xx"
 #	mv -f "$OMR_TARGET/${OMR_KERNEL}/source/target/linux/ipq40xx.old" "$OMR_TARGET/${OMR_KERNEL}/source/target/linux/ipq40xx"
 fi
+
+# 将用户自定义FEED软件包拷贝到OpenWrt源码目录中
 if [ -n "$CUSTOM_FEED" ] && [ -d ${CUSTOM_FEED}/source/${OMR_TARGET}/${OMR_KERNEL} ]; then
 	echo "Copy ${CUSTOM_FEED}/source/${OMR_TARGET}/${OMR_KERNEL}/* to $OMR_TARGET/${OMR_KERNEL}/source"
 	cp -rf ${CUSTOM_FEED}/source/${OMR_TARGET}/${OMR_KERNEL}/* "$OMR_TARGET/${OMR_KERNEL}/source"
 fi
 
+# 进入终端时的系统登录横幅，显示一下构建信息
 cat >> "$OMR_TARGET/${OMR_KERNEL}/source/package/base-files/files/etc/banner" <<EOF
 -----------------------------------------------------
  PACKAGE:     $OMR_DIST
@@ -217,16 +255,19 @@ cat >> "$OMR_TARGET/${OMR_KERNEL}/source/package/base-files/files/etc/banner" <<
 -----------------------------------------------------
 EOF
 
+# 生成feeds.conf文件,这个文件定义了软件包源的位置
 cat > "$OMR_TARGET/${OMR_KERNEL}/source/feeds.conf" <<EOF
 src-link packages $(readlink -f feeds/${OMR_KERNEL}/packages)
 src-link luci $(readlink -f feeds/${OMR_KERNEL}/luci)
 src-link openmptcprouter $(readlink -f "$OMR_FEED")
 EOF
 
+# 用户自定义软件包源的位置
 if [ -n "$CUSTOM_FEED" ]; then
 	echo "src-link ${OMR_DIST} $(readlink -f ${CUSTOM_FEED})" >> "$OMR_TARGET/${OMR_KERNEL}/source/feeds.conf"
 fi
 
+# 固件运行时的各种软件包源
 if [ "$OMR_KERNEL" != "6.12" ]; then
 	if [ "$OMR_DIST" = "openmptcprouter" ]; then
 		cat > "$OMR_TARGET/${OMR_KERNEL}/source/package/system/opkg/files/customfeeds.conf" <<-EOF
@@ -290,6 +331,7 @@ else
 
 fi
 
+# 生成.config文件
 if [ -f $OMR_TARGET_CONFIG ]; then
 	cat "$OMR_TARGET_CONFIG" config -> "$OMR_TARGET/${OMR_KERNEL}/source/.config" <<-EOF
 	CONFIG_IMAGEOPT=y
@@ -311,27 +353,35 @@ fi
 #	echo 'CONFIG_KERNEL_GIT_CLONE_URI="https://github.com/multipath-tcp/mptcp_net-next.git"' >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 #	echo 'CONFIG_KERNEL_GIT_REF="78828adaef8fe9b69f9a8c4b60f74b01c5a31c7a"' >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 #fi
+
+# 编译所有软件包
 if [ "$OMR_ALL_PACKAGES" = "yes" ]; then
 	echo 'CONFIG_ALL=y' >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 	echo 'CONFIG_ALL_NONSHARED=y' >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 fi
+
+# x86_64平台，添加对vdi、vmdk、vhdx虚拟机镜像格式的支持
 if [ "$OMR_IMG" = "yes" ] && [ "$OMR_TARGET" = "x86_64" ]; then 
-	echo 'CONFIG_VDI_IMAGES=y' >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
-	echo 'CONFIG_VMDK_IMAGES=y' >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
-	echo 'CONFIG_VHDX_IMAGES=y' >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
+	echo 'CONFIG_VDI_IMAGES=y' >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"	# VirtualBox
+	echo 'CONFIG_VMDK_IMAGES=y' >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"	# VMware
+	echo 'CONFIG_VHDX_IMAGES=y' >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"	# Hyper-V
 fi
 
+# 构建日志
 if [ "$OMR_LOG" = "yes" ]; then 
 	echo 'CONFIG_BUILD_LOG=y' >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 fi
 
+# 禁用安全启动
 if [ "$DISABLE_FAILSAFE" = "yes" ]; then
 	rm -f "$OMR_TARGET/${OMR_KERNEL}/source/package/base-files/files/lib/preinit/30_failsafe_wait"
 	rm -f "$OMR_TARGET/${OMR_KERNEL}/source/package/base-files/files/lib/preinit/40_run_failsafe_hook"
 fi
 
+# 将发行版名称和软件包列表写入.config文件
 echo "CONFIG_PACKAGE_${OMR_DIST}-${OMR_PACKAGES}=y" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 
+# 系统日志
 if [ "$SYSLOG" = "busybox-syslogd" ]; then
 	echo "CONFIG_BUSYBOX_CONFIG_FEATURE_SYSLOG=y" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 	echo "CONFIG_BUSYBOX_CONFIG_FEATURE_SYSLOGD_CFG=y" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
@@ -349,6 +399,7 @@ elif [ "$SYSLOG" = "logd" ]; then
 	echo "CONFIG_PACKAGE_logd=y" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 fi
 
+# 启用快速转发功能，提高路由器的数据包转发性能，适用于高吞吐量场景 
 if [ "$SHORTCUT_FE" = "yes" ]; then
 	echo "CONFIG_PACKAGE_kmod-fast-classifier=y" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 	echo "CONFIG_PACKAGE_kmod-shortcut-fe=y" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
@@ -360,19 +411,25 @@ else
 	echo "# CONFIG_PACKAGE_kmod-shortcut-fe is not set" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 	echo "# CONFIG_PACKAGE_shortcut-fe is not set" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 fi
+
+# Realtek网卡驱动支持 
 if [ "$OMR_KERNEL" != "5.4" ] && [ "$OMR_TARGET" != "x86_64" ] && [ "$OMR_TARGET" != "x86" ]; then
 	echo "# CONFIG_PACKAGE_kmod-r8125 is not set" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 #	echo "# CONFIG_PACKAGE_kmod-r8168 is not set" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 	echo "CONFIG_PACKAGE_kmod-r8168=m" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 fi
+
+# 禁用RTL8812AU驱动
 if [ "$OMR_KERNEL" = "6.1" ] || [ "$OMR_KERNEL" = "6.6" ] || [ "$OMR_KERNEL" = "6.10" ] || [ "$OMR_KERNEL" = "6.11" ] || [ "$OMR_KERNEL" = "6.12" ]; then
 	echo "# CONFIG_PACKAGE_kmod-rtl8812au-ct is not set" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 fi
 
+# RUTX平台,启用R2EC模块
 if ([ "$OMR_TARGET" = "rutx" ] || [ "$OMR_TARGET" = "rutx12" ]) && [ "$OMR_KERNEL" = "5.4" ]; then
 	echo "CONFIG_PACKAGE_kmod-r2ec=y" >> "$OMR_TARGET/${OMR_KERNEL}/source/.config"
 fi
 
+# bpi-r1,金庸midnight Commander软件包
 if [ "$OMR_TARGET" = "bpi-r1" -a "$OMR_OPENWRT" = "master" ]; then
 	# We disable mc in master, because it leads to unknown compilation errors on bpi-r1 target
 	# No time to check this, now, cause i am focused on make this target work
@@ -387,6 +444,7 @@ if [ "$OMR_TARGET" = "bpi-r1" -a "$OMR_OPENWRT" = "master" ]; then
 	# 2021-03-05 Oliver Welter <oliver@welter.rocks>
 fi
 
+# bpi-r1
 if [ "$OMR_TARGET" = "bpi-r1" ]; then
 	# Check kernel version
 	if [ "$OMR_KERNEL" != "5.4" ]; then
@@ -464,6 +522,7 @@ if [ "$OMR_TARGET" = "bpi-r1" ]; then
 	echo "done"
 fi
 
+# 进入OpenWrt源码目录
 cd "$OMR_TARGET/${OMR_KERNEL}/source"
 
 #if [ "$OMR_UEFI" = "yes" ] && [ "$OMR_TARGET" = "x86_64" ]; then 
@@ -486,6 +545,7 @@ cd "$OMR_TARGET/${OMR_KERNEL}/source"
 #	echo "Done"
 #fi
 
+# 不同的内核版本应用不同的nocheck补丁，用于修改OpenWrt的编辑检查机制，禁用某些编译时的严格检查
 if [ "$OMR_KERNEL" != "6.6" ] && [ "$OMR_KERNEL" != "6.10" ] && [ "$OMR_KERNEL" != "6.11" ] && [ "$OMR_KERNEL" != "6.12" ]; then
 	echo "Checking if No check patch is set or not"
 	if ! patch -Rf -N -p1 -s --dry-run < ../../../patches/nocheck.patch; then
@@ -502,6 +562,7 @@ else
 	echo "Done"
 fi
 
+# 应用Nanqinlang补丁，针对linux内核的性能优化补丁
 echo "Checking if Nanqinlang patch is set or not"
 if ! patch -Rf -N -p1 -s --dry-run < ../../../patches/nanqinlang.patch; then
 	echo "apply..."
@@ -509,6 +570,7 @@ if ! patch -Rf -N -p1 -s --dry-run < ../../../patches/nanqinlang.patch; then
 fi
 echo "Done"
 
+# Meson补丁,针对Meson构建系统的修复补丁
 echo "Checking if Meson patch is set or not"
 if [ "$OMR_KERNEL" = "5.4" ] && ! patch -Rf -N -p1 -s --dry-run < ../../../patches/meson.patch; then
 	patch -N -p1 -s < ../../../patches/meson.patch
@@ -523,6 +585,7 @@ echo "Done"
 #echo "Done"
 
 # Add BBR2 patch, only working on 64bits images for now
+# BBR3 tcp拥塞控制算法
 if ([ "$OMR_KERNEL" = "5.4" ] || [ "$OMR_KERNEL" = "5.4" ]) && ([ "$OMR_TARGET" = "x86_64" ] || [ "$OMR_TARGET" = "bpi-r64" ] || [ "$OMR_TARGET" = "rpi4" ] || [ "$OMR_TARGET" = "espressobin" ] || [ "$OMR_TARGET" = "r2s" ] || [ "$OMR_TARGET" = "r4s" ] || [ "$OMR_TARGET" = "rpi3" ]); then
 	echo "Checking if BBRv2 patch is set or not"
 	if ! patch -Rf -N -p1 -s --dry-run < ../../../patches/bbr2.patch; then
@@ -532,6 +595,7 @@ if ([ "$OMR_KERNEL" = "5.4" ] || [ "$OMR_KERNEL" = "5.4" ]) && ([ "$OMR_TARGET" 
 	echo "Done"
 fi
 
+# smsc75xx补丁
 echo "Checking if smsc75xx patch is set or not"
 if ! patch -Rf -N -p1 -s --dry-run < ../../../patches/smsc75xx.patch; then
 	echo "apply..."
@@ -912,7 +976,11 @@ if [ "$OMR_KERNEL" = "6.11" ]; then
 	#echo 'CONFIG_KERNEL_GIT_CLONE_URI="https://github.com/multipath-tcp/mptcp_net-next.git"' >> ".config"
 	#echo 'CONFIG_KERNEL_GIT_REF="92590173530711151d50d13b145a9621b5e8d239"' >> ".config"
 fi
+
+# 6.12内核
 if [ "$OMR_KERNEL" = "6.12" ]; then
+	
+	# 修改Makefile中的内核版本号
 	echo "Set to kernel 6.12 for x86 arch"
 	find target/linux/x86 -type f -name Makefile -exec sed -i 's%KERNEL_PATCHVER:=6.6%KERNEL_PATCHVER:=6.12%g' {} \;
 	echo "Done"
@@ -925,7 +993,10 @@ if [ "$OMR_KERNEL" = "6.12" ]; then
 	echo "Set to kernel 6.12 for bcm27xx"
 	find target/linux/qualcommax -type f -name Makefile -exec sed -i 's%KERNEL_PATCHVER:=6.6%KERNEL_PATCHVER:=6.12%g' {} \;
 	echo "Done"
+
 	echo "CONFIG_VERSION_CODE=6.12" >> ".config"
+	
+	# 内核模块
 	echo "# CONFIG_PACKAGE_kmod-gpio-button-hotplug is not set" >> ".config"
 	echo "# CONFIG_PACKAGE_kmod-meraki-mx100 is not set" >> ".config"
 	echo "# CONFIG_PACKAGE_kmod-gpio-nct5104d is not set" >> ".config"
@@ -940,6 +1011,8 @@ if [ "$OMR_KERNEL" = "6.12" ]; then
 	echo "# CONFIG_PACKAGE_464xlat is not set" >> ".config"
 	echo "# CONFIG_PACKAGE_kmod-nat46 is not set" >> ".config"
 	echo "# CONFIG_PACKAGE_kmod-ath10k-ct-smallbuffers is not set" >> ".config"
+	
+	# BPF
 	echo "CONFIG_BPF_TOOLCHAIN=y" >> ".config"
 	echo "CONFIG_BPF_TOOLCHAIN_HOST=y" >> ".config"
 	echo "CONFIG_KERNEL_BPF_EVENTS=y" >> ".config"
@@ -949,9 +1022,11 @@ if [ "$OMR_KERNEL" = "6.12" ]; then
 	echo "# CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set" >> ".config"
 	echo "CONFIG_KERNEL_MODULE_ALLOW_BTF_MISMATCH=y" >> ".config"
 	echo 'CONFIG_EXTRA_OPTIMIZATION="-fno-caller-saves -fno-plt -Wno-stringop-truncation -Wno-stringop-overread -Wno-calloc-transposed-args"' >> ".config"
+	
 	# Remove for now packages that doesn't compile
 	rm -rf package/kernel/mt76
 	rm -rf package/kernel/rtl8812au-ct
+	
 	# Remove not needed patches
 	rm -f package/kernel/mac80211/patches/build/200-Revert-wifi-iwlwifi-Use-generic-thermal_zone_get_tri.patch
 	rm -f package/kernel/mac80211/patches/build/210-revert-split-op.patch
@@ -960,9 +1035,12 @@ if [ "$OMR_KERNEL" = "6.12" ]; then
 	rm -f package/kernel/mac80211/patches/build/250-backport_iwlwifi_thermal.patch
 	rm -f package/kernel/rtl8812au-ct/patches/099-cut-linkid-linux-version-code-conditionals.patch
 	rm -f package/kernel/rtl8812au-ct/patches/100-api_update.patch
+	
 	#echo 'CONFIG_KERNEL_GIT_CLONE_URI="https://github.com/multipath-tcp/mptcp_net-next.git"' >> ".config"
 	#echo 'CONFIG_KERNEL_GIT_REF="92590173530711151d50d13b145a9621b5e8d239"' >> ".config"
 	echo 'CONFIG_PACKAGE_apk-openssl=y' >> ".config"
+	
+	# 检查当前架构是否支持6.12内核
 	if [ ! -d target/linux/`sed -nE 's/CONFIG_TARGET_([a-z0-9]*)=y/\1/p' ".config" | tr -d "\n"`/patches-6.12 ]; then
 		echo "Sorry but kernel 6.12 is not supported on your arch yet"
 		NOT_SUPPORTED="1"
@@ -973,6 +1051,7 @@ fi
 cd "../../.."
 rm -rf feeds/${OMR_KERNEL}/luci/modules/luci-mod-network
 
+# LUCI系统日志补丁
 if [ -d feeds/${OMR_KERNEL}/${OMR_DIST}/luci-mod-status ]; then
 	rm -rf feeds/${OMR_KERNEL}/luci/modules/luci-mod-status
 elif [ "$OMR_KERNEL" = "6.6" ] || [ "$OMR_KERNEL" = "6.10" ] || [ "$OMR_KERNEL" = "6.11" ] || [ "$OMR_KERNEL" = "6.12" ]; then
@@ -992,18 +1071,21 @@ else
 	cd -
 fi
 
+# LUCI ubbound DNS服务器日志补丁
 cd feeds/${OMR_KERNEL}
 if ! patch -Rf -N -p1 -s --dry-run < ../../patches/luci-unbound-logread.patch; then
 	patch -N -p1 -s < ../../patches/luci-unbound-logread.patch
 fi
 cd -
 
-
+# 清理特定的LUCI模块
 [ -d feeds/${OMR_KERNEL}/${OMR_DIST}/luci-app-statistics ] && rm -rf feeds/${OMR_KERNEL}/luci/applications/luci-app-statistics
 [ -d feeds/${OMR_KERNEL}/${OMR_DIST}/luci-proto-modemmanager ] && rm -rf feeds/${OMR_KERNEL}/luci/protocols/luci-proto-modemmanager
 #if [ -d ${OMR_FEED}/netifd ] && [ "${OMR_KERNEL}" != "5.4" ]; then
 #	rm -rf ${OMR_TARGET}/${OMR_KERNEL}/source/package/network/config/netifd
 #fi
+
+# 清理特定的软件包
 [ -d ${OMR_FEED}/libgpiod ] && rm -rf feeds/${OMR_KERNEL}/packages/libs/libgpiod
 [ -d ${OMR_FEED}/iperf3 ] && rm -rf feeds/${OMR_KERNEL}/packages/net/iperf3
 [ -d ${OMR_FEED}/golang ] && {
@@ -1015,25 +1097,31 @@ cd -
 [ -d ${CUSTOM_FEED}/syslog-ng ] && rm -rf feeds/${OMR_KERNEL}/packages/admin/syslog-ng
 ([ "$OMR_KERNEL" = "6.6" ] || [ "$OMR_KERNEL" = "6.10" ]) && [ -d ${OMR_FEED}/xtables-addons ] && rm -rf feeds/${OMR_KERNEL}/packages/net/xtables-addons
 
+# 添加法国奥克语支持
 echo "Add Occitan translation support"
 cd feeds/${OMR_KERNEL}
 if ! patch -Rf -N -p1 -s --dry-run < ../../patches/luci-occitan.patch; then
 	patch -N -p1 -s < ../../patches/luci-occitan.patch
 	#sh feeds/luci/build/i18n-add-language.sh oc
 fi
+
+# 数组排序工具补丁
 if [ "$OMR_KERNEL" = "5.4" ] && ! patch -Rf -N -p1 -s --dry-run < ../../patches/luci-base-add_array_sort_utilities.patch; then
 	patch -N -p1 -s < ../../patches/luci-base-add_array_sort_utilities.patch
 fi
+
 #if [ -d luci/modules/luci-mod-status ]; then
 #	if ! patch -Rf -N -p1 -s --dry-run < ../../patches/luci-nftables.patch; then
 #		patch -N -p1 -s < ../../patches/luci-nftables.patch
 #	fi
 #fi
 
+# 法国奥克语支持
 cd ../..
 [ -d $OMR_FEED/luci-base/po/oc ] && cp -rf $OMR_FEED/luci-base/po/oc feeds/${OMR_KERNEL}/luci/modules/luci-base/po/
 echo "Done"
 
+# 更新软件源
 cd "$OMR_TARGET/${OMR_KERNEL}/source"
 echo "Update feeds index"
 cp .config .config.keep
@@ -1049,6 +1137,7 @@ scripts/feeds update -a
 #echo "Done"
 #cd "$OMR_TARGET/${OMR_KERNEL}/source"
 
+# 安装依赖的软件包和luci模块
 if [ "$OMR_ALL_PACKAGES" = "yes" ]; then
 	scripts/feeds install -a -d m -p packages
 	scripts/feeds install -a -d m -p luci
@@ -1059,6 +1148,7 @@ if [ -n "$CUSTOM_FEED" ]; then
 else
 	scripts/feeds install -a -d y -f -p openmptcprouter
 fi
+
 # Use iproute2 package from the normal repo for 5.4
 if [ "$OMR_KERNEL" = "5.4" ]; then
 	scripts/feeds uninstall iproute2
@@ -1070,10 +1160,13 @@ if [ "$OMR_KERNEL" = "5.4" ]; then
 #	scripts/feeds uninstall rust
 #	scripts/feeds install -p packages rust
 fi
+
 #if [ "$OMR_KERNEL" != "5.4" ] && [ "$OMR_KERNEL" != "6.1" ]; then
 #	scripts/feeds uninstall netifd
 #	scripts/feeds install netifd
 #fi
+
+# 安装kmod-macremapper内核模块
 cp .config.keep .config
 scripts/feeds install kmod-macremapper
 echo "Done"
@@ -1082,6 +1175,8 @@ if [ ! -f "../../../$OMR_TARGET_CONFIG" ] || [ "$NOT_SUPPORTED" = "1" ]; then
 	echo "Target $OMR_TARGET not found ! You have to configure and compile your kernel manually."
 	exit 1
 fi
+
+# 开始编译
 [ "$ONLY_PREPARE" = "yes" ] && exit 0
 echo "Building $OMR_DIST for the target $OMR_TARGET with kernel ${OMR_KERNEL}"
 make defconfig
