@@ -33,7 +33,6 @@ _get_repo() (
 )
 
 OMR_DIST=${OMR_DIST:-openmptcprouter}                   # 目标路径
-OMR_HOST=${OMR_HOST:-$(curl -sS ifconfig.co)}           # 编译主机的公网IP
 OMR_KEEPBIN=${OMR_KEEPBIN:-yes}                         # 保留上一次的编译产物
 OMR_LOG=${OMR_LOG:-yes}                                 # 编译日志
 OMR_TARGET=${OMR_TARGET:-rpi4}                        	# 目标平台
