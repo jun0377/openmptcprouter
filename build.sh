@@ -68,7 +68,7 @@ rm -rf ${KERNEL_DIR}/source && ln -s ${TOP_DIR}/submodules/openwrt ${KERNEL_DIR}
 mkdir -p ${KERNEL_DIR}/source/feeds/${OMR_KERNEL}
 rm -rf ${KERNEL_DIR}/source/feeds/${OMR_KERNEL}/packages && ln -s ${TOP_DIR}/submodules/packages ${KERNEL_DIR}/source/feeds/${OMR_KERNEL}/packages
 rm -rf ${KERNEL_DIR}/source/feeds/${OMR_KERNEL}/luci && ln -s ${TOP_DIR}/submodules/luci ${KERNEL_DIR}/source/feeds/${OMR_KERNEL}/luci
-rm -rf ${KERNEL_DIR}/source/feeds/${OMR_KERNEL}/routing && ln -s ${TOP_DIR}/submodules/luci ${KERNEL_DIR}/source/feeds/${OMR_KERNEL}/routing
+rm -rf ${KERNEL_DIR}/source/feeds/${OMR_KERNEL}/routing && ln -s ${TOP_DIR}/submodules/routing ${KERNEL_DIR}/source/feeds/${OMR_KERNEL}/routing
 rm -rf ${KERNEL_DIR}/source/feeds/openmptcprouter && ln -s ${TOP_DIR}/submodules/openmptcprouter-feeds ${KERNEL_DIR}/source/feeds/openmptcprouter
 
 if [ "$OMR_KEEPBIN" = "no" ]; then 
