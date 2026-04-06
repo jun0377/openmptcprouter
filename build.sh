@@ -135,45 +135,6 @@ cd "$OMR_TARGET/${OMR_KERNEL}/source"
 echo "Set to kernel 6.6 for bcm27xx"
 find target/linux/bcm27xx -type f -name Makefile -exec sed -i 's%KERNEL_PATCHVER:=6.1%KERNEL_PATCHVER:=6.6%g' {} \;
 
-# TODO: 为什么要删除这个模块？
-# cd "../../.."
-# rm -rf feeds/${OMR_KERNEL}/luci/modules/luci-mod-network
-
-# 系统日志syslog功能相关补丁
-# cd feeds/${OMR_KERNEL}
-# if ! patch -Rf -N -p1 -s --dry-run < ../../patches/luci-syslog-6.10.patch; then
-#     patch -N -p1 -s < ../../patches/luci-syslog-6.10.patch
-# fi
-# cd -
-
-# unbound DNS域名解析日志相关补丁
-# cd feeds/${OMR_KERNEL}
-# if ! patch -Rf -N -p1 -s --dry-run < ../../patches/luci-unbound-logread.patch; then
-# 	patch -N -p1 -s < ../../patches/luci-unbound-logread.patch
-# fi
-# cd -
-
-# TODO: 为什么要先删除下面这些模块？？？
-# [ -d feeds/${OMR_KERNEL}/${OMR_DIST}/luci-app-statistics ] && rm -rf feeds/${OMR_KERNEL}/luci/applications/luci-app-statistics
-# [ -d feeds/${OMR_KERNEL}/${OMR_DIST}/luci-proto-modemmanager ] && rm -rf feeds/${OMR_KERNEL}/luci/protocols/luci-proto-modemmanager
-# [ -d ${OMR_FEED}/libgpiod ] && rm -rf feeds/${OMR_KERNEL}/packages/libs/libgpiod
-# [ -d ${OMR_FEED}/iperf3 ] && rm -rf feeds/${OMR_KERNEL}/packages/net/iperf3
-# [ -d ${OMR_FEED}/golang ] && {
-# 	rm -rf feeds/${OMR_KERNEL}/packages/lang/golang
-# 	cp -r ${OMR_FEED}/golang feeds/${OMR_KERNEL}/packages/lang/
-# }
-# [ -d ${OMR_FEED}/openvpn ] && rm -rf feeds/${OMR_KERNEL}/packages/net/openvpn
-# [ -d ${OMR_FEED}/iproute2 ] && rm -rf feeds/${OMR_KERNEL}/packages/network/utils/iproute2
-# [ -d ${CUSTOM_FEED}/syslog-ng ] && rm -rf feeds/${OMR_KERNEL}/packages/admin/syslog-ng
-# ([ "$OMR_KERNEL" = "6.6" ] || [ "$OMR_KERNEL" = "6.10" ]) && [ -d ${OMR_FEED}/xtables-addons ] && rm -rf feeds/${OMR_KERNEL}/packages/net/xtables-addons
-
-# 奥克语语言支持
-# echo "Add Occitan translation support"
-# cd feeds/${OMR_KERNEL}
-# if ! patch -Rf -N -p1 -s --dry-run < ../../patches/luci-occitan.patch; then
-# 	patch -N -p1 -s < ../../patches/luci-occitan.patch
-# fi
-
 # Luci界面的多语言支持
 cd ../..
 [ -d $OMR_FEED/luci-base/po/oc ] && cp -rf $OMR_FEED/luci-base/po/oc feeds/${OMR_KERNEL}/luci/modules/luci-base/po/
