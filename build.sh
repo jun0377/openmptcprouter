@@ -191,10 +191,19 @@ cp ${TOP_DIR}/conf/rpi4/custom_conf .config && cp .config .config.keep
 # scripts/feeds install -a -d y -f -p openmptcprouter
 
 cp .config.keep .config
+scripts/feeds update luci
+scripts/feeds install -a -p luci
 scripts/feeds install kmod-macremapper
+
+./scripts/feeds update packages
+./scripts/feeds install -a -p packages
+
+./scripts/feeds install -p packages modemdata
+./scripts/feeds install -p packages sms-tool
 echo "Done"
 
 echo "Building $OMR_DIST for the target $OMR_TARGET with kernel ${OMR_KERNEL}"
 # make defconfig 		# 我已经生成了一个.config文件，这一步操作没有必要
+cp ${TOP_DIR}/conf/rpi4/custom_conf .config
 make -j$(nproc) IGNORE_ERRORS=m "$@"
 echo "Done"
