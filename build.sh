@@ -9,7 +9,7 @@
 
 # 脚本执行时输出行号
 # export PS4='<Line ${LINENO}> '
-set -x
+# set -x
 set -e
 
 umask 0022
